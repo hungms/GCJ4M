@@ -77,7 +77,7 @@ plot_seq_length <- function(x, sample = "sample", group = NULL, ...){
 
     if(length(group) > 0){
         facet_var <- paste0('~ ', group)
-        plot <- plot + facet_wrap(as.formula(facet_var), nrow = 1)}
+        plot <- plot + facet_wrap(as.formula(facet_var), nrow = 1, scale = "free_x")}
     
     return(plot)}
 
