@@ -68,19 +68,16 @@ plot_seq_length <- function(x, sample = "sample", group = NULL, ...){
     plot <- x %>%
         ggplot(aes_string(x = paste0(sample), y="length", color = group)) +
         geom_jitter(size = 2, width = 0.2) +
-        theme_bw() +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
         geom_hline(yintercept = 433) +
         xlab("") +
         ylab("Sequence length (bp-1)") +
-        theme(
-            axis.text.x = element_text(angle = 20, vjust = 0.8, hjust=0.8),
-            panel.grid = element_blank(),
-            panel.border = element_rect(colour = "black", fill=NA, size=0.8))
+        theme_border() +
+        facet_aes()
 
     if(length(group) > 0){
         facet_var <- paste0('~ ', group)
-        plot <- plot + facet_wrap(as.formula(facet_var), nrow = 1, scales = "free")}
+        plot <- plot + facet_wrap(as.formula(facet_var), nrow = 1)}
     
     return(plot)}
 
