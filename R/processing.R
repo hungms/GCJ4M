@@ -412,10 +412,10 @@ calculate_group_transition_freq <- function(x, var, absolute = T) {
 
   if(absolute == F){
     df <- df %>%
-      mutate(transition_freq = transition_counts/nseq)}
+      mutate(transition_freq = transition_counts/(nseq*433))}
   else{
     df <- df %>%
-      mutate(transition_freq = transition_counts/nreads)}
+      mutate(transition_freq = transition_counts/(nreads*433))}
 
   return(df)
 }
