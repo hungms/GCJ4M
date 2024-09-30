@@ -328,6 +328,7 @@ plot_snp_heatmap <- function(snp_matrix_list){
             column_title = names(snp_matrix_list)[x],
             na_col = "black",
             col = col_fun,
+            border_gp = gpar(col = "black", lwd = 3),
             rect_gp = gpar(col = "white", lwd = 1),
             heatmap_legend_param = list(
                 title = "SNP Count (%)",
