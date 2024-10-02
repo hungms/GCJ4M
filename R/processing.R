@@ -223,9 +223,8 @@ remove_lowqc <- function(x, sample = "sample", min.reads = 400, min.copy = 1){
 #' count number of SNP
 #' 
 #' @param x dataframe of JH4 pipeline output
-#' @param absolute defaults to TRUE to return SNP counts from all reads, else return SNP counts from each sequence
 #' @export
-count_snp <- function(x, absolute = T){
+count_snp <- function(x){
 
     # make snp table
     table <- matrix(nrow=4, ncol=4, 0)
@@ -240,12 +239,7 @@ count_snp <- function(x, absolute = T){
         for (k in 1:length(conversions[[j]])){
             snp_count <- unlist(strsplit(conversions[[j]][k],'='))
             from_to <- unlist(strsplit(snp_count[1],':'))
-
-            # if use absolute or not (read- or sequence- level)
-            if(absolute == F){
-                table[from_to[1], from_to[2]] <- table[from_to[1], from_to[2]] + as.numeric(snp_count[2])}
-            else{
-               	table[from_to[1], from_to[2]] <- table[from_to[1], from_to[2]] + as.numeric(snp_count[2])*nreads}}}
+            table[from_to[1], from_to[2]] <- table[from_to[1], from_to[2]] + as.numeric(snp_count[2])*nreads}}
 
     # return snp table
     return(table)}
@@ -256,88 +250,94 @@ count_snp <- function(x, absolute = T){
 #' 
 #' @param x dataframe of JH4 pipeline output
 #' @param sample column name indicating sample
-#' @param absolute defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences
+#' @param method normalization method; either by CPM (method = "CPM") or percentages (method = "%"), defaults to "CPM"
+#' @param strain specify mouse strain; either "B6" or "BALBC" currently available, defaults to "B6"
 #' @export
-calculate_sample_snp <- function(x, sample = "sample", absolute = T){
-    snptable <- list()
+calculate_sample_snp <- function(x, sample = "sample", method = "CPM", strain = "B6"){
+    stopifnot(method %in% c("CPM", "%"))
+    stopifnot(strain %in% c("B6", "BALBC"))
+
+    sample_snp <- list()
+    nreads <- c()
     samplelist <- split(x, x[[sample]])
 
     # calculate snp per sample
     for(i in seq_along(samplelist)){
-        snptable[[i]] <- count_snp(samplelist[[i]], absolute = absolute)}
+        nreads <- c(nreads, sum(samplelist[[i]]$count))
+        sample_snp[[i]] <- count_snp(samplelist[[i]])}
 
-    names(snptable) <- names(samplelist)
-    return(snptable)}
+    # if strain = BALBC
+    if(strain == "BALBC"){
+        for(x in seq_along(sample_snp)){
+            sample_snp[[x]][1,4] <- 0
+            sample_snp[[x]][2,3] <- 0}}
+
+    # normalize snp per sample
+    normalized_list <- list()
+    for(x in seq_along(sample_snp)){
+        snptable <- sample_snp[[x]]
+        if(method == "%"){
+            sample_snp[[x]] <- sample_snp[[x]]*100/sum(sample_snp[[x]])}
+        if(method == "CPM"){
+            sample_snp[[x]] <- sample_snp[[x]]*1000000/nreads[x]}}
+
+    names(sample_snp) <- paste0(names(samplelist))
+    return(sample_snp)}
 
 #' calculate_group_snp
 #' 
 #' calculate SNP count matrix per group
 #' 
-#' @param snptable a list of count matrix per sample
+#' @param sample_snp a list of count matrix per sample
 #' @param group_vec a vector of groups for each sample; vector must be same length as the list of snptable
-#' @param average whether to average the counts per sample; defaults to TRUE
 #' @export
-calculate_group_snp <- function(snptable, group_vec = NULL, average = T){
+calculate_group_snp <- function(sample_snp, group_vec = NULL){
     if(length(group_vec) == 0){
-        group_vec <- rep("group", length(snptable))}
-    stopifnot(length(snptable) == length(group_vec))
+        group_vec <- rep("group", length(sample_snp))}
+    stopifnot(length(sample_snp) == length(group_vec))
 
-    avgsnptable <- list()
+    group_snp <- list()
     glevels <- unique(group_vec)
-    for(g in seq_along(glevels)){
-        grouptable <- snptable[which(group_vec == glevels[g])]
-        avgsnptable[[g]] <- Reduce("+", grouptable)
-        if(average){
-            avgsnptable[[g]] <- avgsnptable[[g]]/length(grouptable)}}
-    names(avgsnptable) <- glevels
 
-    return(avgsnptable)
-}
+    for(g in seq_along(glevels)){
+        grouptable <- sample_snp[which(group_vec == glevels[g])]
+        group_snp[[g]] <- Reduce("+", grouptable)/length(grouptable)}
+
+    names(group_snp) <- paste0(glevels)
+    return(group_snp)}
 
 
 #' plot_snp_heatmap
 #' 
 #' plot heatmap for SNP count matrices
 #' 
-#' @param snp_matrix_list a list of SNP matrix
+#' @param snp_list a list of SNP matrix
+#' @param legend.title specify legend title
 #' @export
-plot_snp_heatmap <- function(snp_matrix_list){
+plot_snp_heatmap <- function(snp_list, legend.title = "CPM"){
     heatmap_list <- list()
-    percent_list <- list()
-
-    legend <- rep(F, length(snp_matrix_list))
+    legend <- rep(F, length(snp_list))
     legend[1] <- T
-
-    for(x in seq_along(snp_matrix_list)){
-        snptable <- snp_matrix_list[[x]]
-        percent <- snptable*100/sum(snptable)
-        rownames(percent) <- rownames(snptable)
-        percent_list[[x]] <- percent}
-
-    max <- Reduce("max", percent_list)
-
-    # make heatmap
-    for(x in seq_along(snp_matrix_list)){
-        snptable <- snp_matrix_list[[x]]
-        percent <- percent_list[[x]]
+    max <- Reduce("max", snp_list)
+    for(x in seq_along(snp_list)){
+        snptable <- snp_list[[x]]
         col_fun = circlize::colorRamp2(seq(from = 0, to = round(max, -1), length.out = 10), rev(RColorBrewer::brewer.pal(10, "RdBu")))
-        percent[percent == 0] <- NA
+        snptable[snptable == 0] <- NA
         heatmap_list[[x]] <- Heatmap(
-            percent,
+            snptable,
             border = TRUE,
-            column_title = names(snp_matrix_list)[x],
+            column_title = gsub(" reads=.*", "", names(snp_list)[x]),
             na_col = "black",
             col = col_fun,
             border_gp = gpar(col = "black", lwd = 3),
             rect_gp = gpar(col = "white", lwd = 1),
             heatmap_legend_param = list(
-                title = "SNP Count (%)",
+                title = legend.title,
                 legend_direction = "vertical",
                 width = unit(10, "mm")),
             show_heatmap_legend = legend[x],
             show_column_names = T,
             column_names_side = "bottom",
-            #column_title = "To",
             column_title_side = "top",
             column_order = colnames(snptable),
             column_dend_reorder = F,
@@ -355,7 +355,7 @@ plot_snp_heatmap <- function(snp_matrix_list){
                 grid.text(round(snptable[i, j]), x, y)})
         }
 
-    names(heatmap_list) <- names(snp_matrix_list)
+    names(heatmap_list) <- names(snp_list)
     formula <- paste0("heatmap_list[[", 1:length(heatmap_list), "]]", collapse = " + ")
     expression_string <- paste0('draw(', formula, ', heatmap_legend_side = "right")')
     return(eval(parse(text = expression_string)))}
