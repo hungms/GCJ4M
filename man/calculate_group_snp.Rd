@@ -4,14 +4,12 @@
 \alias{calculate_group_snp}
 \title{calculate_group_snp}
 \usage{
-calculate_group_snp(snptable, group_vec = NULL, average = T)
+calculate_group_snp(sample_snp, group_vec = NULL)
 }
 \arguments{
-\item{snptable}{a list of count matrix per sample}
+\item{sample_snp}{a list of count matrix per sample}
 
 \item{group_vec}{a vector of groups for each sample; vector must be same length as the list of snptable}
-
-\item{average}{whether to average the counts per sample; defaults to TRUE}
 }
 \description{
 calculate SNP count matrix per group

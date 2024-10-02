@@ -4,10 +4,12 @@
 \alias{plot_snp_heatmap}
 \title{plot_snp_heatmap}
 \usage{
-plot_snp_heatmap(snp_matrix_list)
+plot_snp_heatmap(snp_list, legend.title = "CPM")
 }
 \arguments{
-\item{snp_matrix_list}{a list of SNP matrix}
+\item{snp_list}{a list of SNP matrix}
+
+\item{legend.title}{specify legend title}
 }
 \description{
 plot heatmap for SNP count matrices

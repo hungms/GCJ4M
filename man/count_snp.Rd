@@ -4,12 +4,10 @@
 \alias{count_snp}
 \title{count_snp}
 \usage{
-count_snp(x, absolute = T)
+count_snp(x)
 }
 \arguments{
 \item{x}{dataframe of JH4 pipeline output}
-
-\item{absolute}{defaults to TRUE to return SNP counts from all reads, else return SNP counts from each sequence}
 }
 \description{
 count number of SNP
