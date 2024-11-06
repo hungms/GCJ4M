@@ -4,7 +4,7 @@
 \alias{calculate_sample_snp}
 \title{calculate_sample_snp}
 \usage{
-calculate_sample_snp(x, sample = "sample", method = "CPM", strain = "B6")
+calculate_sample_snp(x, sample = "sample", method = "CPM")
 }
 \arguments{
 \item{x}{dataframe of JH4 pipeline output}
@@ -12,8 +12,6 @@ calculate_sample_snp(x, sample = "sample", method = "CPM", strain = "B6")
 \item{sample}{column name indicating sample}
 
 \item{method}{normalization method; either by CPM (method = "CPM") or percentages (method = "\%"), defaults to "CPM"}
-
-\item{strain}{specify mouse strain; either "B6" or "BALBC" currently available, defaults to "B6"}
 }
 \description{
 calculate SNP count matrix per sample

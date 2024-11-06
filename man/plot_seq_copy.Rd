@@ -4,7 +4,7 @@
 \alias{plot_seq_copy}
 \title{plot_seq_copy}
 \usage{
-plot_seq_copy(x, var)
+plot_seq_copy(x, var, min.copy = 1)
 }
 \arguments{
 \item{x}{dataframe of JH4 pipeline output}

@@ -50,14 +50,8 @@ facet_aes <- function(){
 #' Collapse shallow/deep sequencing reads
 #' 
 #' @param x dataframe of JH4 pipeline output
-#' @param strain mouse strain, currently available B6 or BALBC
 #' @export
-collapse_reads <- function(x, strain = "B6"){
-    stopifnot(strain %in% c("B6", "BALBC"))
-    if(strain == "BALBC"){
-        message("BALBC strain therefore remove SNP < 4 and subtract SNP by 4")
-        x <- x %>% filter(snps >= 4) %>% mutate(snps = snps - 4)}
-
+collapse_reads <- function(x){
     x <- x %>%
         mutate(
             indel = case_when(
@@ -193,13 +187,13 @@ plot_multi_qc <- function(x, sample = "sample", group = NULL){
 #' @param x dataframe of JH4 pipeline output
 #' @param var column name to group by
 #' @export
-plot_seq_copy <- function(x, var){
+plot_seq_copy <- function(x, var, min.copy = 1){
     plot <- x %>%
-        ggplot(aes(x=log10(count), y=total)) +
+        ggplot(aes(x=log(count), y=total)) +
         geom_point(aes_string(colour=var)) +
-        geom_vline(xintercept = log10(1.5), linetype = "dashed") +
-        xlab("log10 nReads\nin each sequence") +
-        ylab("nSNPs\nin each sequence") +
+        geom_vline(xintercept = log(min.copy + 0.5), linetype = "dashed") +
+        xlab("log(nREAD)\n") +
+        ylab("nSNP\n") +
         theme_border()
     return(plot)}
 
@@ -262,11 +256,10 @@ count_snp <- function(x){
 #' @param x dataframe of JH4 pipeline output
 #' @param sample column name indicating sample
 #' @param method normalization method; either by CPM (method = "CPM") or percentages (method = "%"), defaults to "CPM"
-#' @param strain specify mouse strain; either "B6" or "BALBC" currently available, defaults to "B6"
 #' @export
-calculate_sample_snp <- function(x, sample = "sample", method = "CPM", strain = "B6"){
+calculate_sample_snp <- function(x, sample = "sample", method = "CPM"){ #, strain = "B6"
     stopifnot(method %in% c("CPM", "%"))
-    stopifnot(strain %in% c("B6", "BALBC"))
+    #stopifnot(strain %in% c("B6", "BALBC"))
 
     sample_snp <- list()
     nreads <- c()
@@ -278,10 +271,10 @@ calculate_sample_snp <- function(x, sample = "sample", method = "CPM", strain = 
         sample_snp[[i]] <- count_snp(samplelist[[i]])}
 
     # if strain = BALBC
-    if(strain == "BALBC"){
-        for(x in seq_along(sample_snp)){
-            sample_snp[[x]][1,4] <- 0
-            sample_snp[[x]][2,3] <- 0}}
+    #if(strain == "BALBC"){
+    #    for(x in seq_along(sample_snp)){
+    #        sample_snp[[x]][1,4] <- 0
+    #        sample_snp[[x]][2,3] <- 0}}
 
     # normalize snp per sample
     normalized_list <- list()
