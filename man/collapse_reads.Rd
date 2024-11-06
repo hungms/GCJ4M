@@ -4,10 +4,12 @@
 \alias{collapse_reads}
 \title{collapse_reads}
 \usage{
-collapse_reads(x)
+collapse_reads(x, strain = "B6")
 }
 \arguments{
 \item{x}{dataframe of JH4 pipeline output}
+
+\item{strain}{mouse strain, currently available B6 or BALBC}
 }
 \description{
 Collapse shallow/deep sequencing reads

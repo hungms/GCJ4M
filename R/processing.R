@@ -1,3 +1,13 @@
+#' theme_text
+#' 
+#' ggplot2 aesthetic option with texts
+#' @export 
+theme_text <- function(){
+    theme(
+        plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+        axis.text.x = element_text(angle = 45, vjust = 0.8, hjust=0.8, size = 10),
+        axis.text.y = element_text(size = 8))}
+
 #' theme_border
 #'
 #' ggplot2 aesthetic option with borders
@@ -40,8 +50,14 @@ facet_aes <- function(){
 #' Collapse shallow/deep sequencing reads
 #' 
 #' @param x dataframe of JH4 pipeline output
+#' @param strain mouse strain, currently available B6 or BALBC
 #' @export
-collapse_reads <- function(x){
+collapse_reads <- function(x, strain = "B6"){
+    stopifnot(strain %in% c("B6", "BALBC"))
+    if(strain == "BALBC"){
+        message("BALBC strain therefore remove SNP < 4 and subtract SNP by 4")
+        x <- x %>% filter(snps >= 4) %>% mutate(snps = snps - 4)}
+
     x <- x %>%
         mutate(
             indel = case_when(
@@ -66,12 +82,16 @@ collapse_reads <- function(x){
 #' @export
 plot_seq_length <- function(x, sample = "sample", group = NULL, ...){
     plot <- x %>%
-        ggplot(aes_string(x = paste0(sample), y="length", color = group)) +
-        geom_jitter(size = 2, width = 0.2) +
+        mutate(count = as.numeric(count)) %>%
+        arrange(count) %>%
+        ggplot(aes_string(x = paste0(sample), y="length", fill = group, size = "count")) +
+        geom_jitter(width = 0.2, shape = 21) +
         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
         geom_hline(yintercept = 433) +
+        scale_size(range = c(2,8)) +
         xlab("") +
         ylab("Sequence length (bp-1)") +
+        guides(fill = guide_legend(title = "Group"), size = guide_legend(title = "nREAD")) +
         theme_border() +
         facet_aes()
 
@@ -90,15 +110,30 @@ plot_seq_length <- function(x, sample = "sample", group = NULL, ...){
 #' @param filter whether to remove indel sequences in the final output
 #' @export
 remove_indels <- function(x, sample = "sample", filter = T){
-    x %>%
-        mutate(indel = ifelse(insertions + deletions > 0, "WITH_INDEL", "NO_INDEL")) %>%
+    nseq <- x %>%
+        mutate(
+            indel = ifelse(insertions + deletions > 0, "WITH_INDEL (nSEQ)", "NO_INDEL (nSEQ)")) %>%
             group_by_at(vars(one_of(c(sample, "indel")))) %>%
             summarize(count = n()) %>%
             group_by_at(vars(one_of(sample))) %>%
-            mutate(pct = count*100/sum(count)) %>%
+            mutate(pct = round(count*100/sum(count), 1)) %>%
             dplyr::select(!count) %>%
-            pivot_wider(names_from = "indel", values_from = "pct") %>%
-            print(.)
+            filter(indel == "NO_INDEL (nSEQ)") %>%
+            pivot_wider(names_from = "indel", values_from = "pct")
+
+    nread <- x %>%
+        mutate(
+            indel = ifelse(insertions + deletions > 0, "WITH_INDEL (nREAD)", "NO_INDEL (nREAD)")) %>%
+            group_by_at(vars(one_of(c(sample, "indel")))) %>%
+            summarize(count = sum(count)) %>%
+            group_by_at(vars(one_of(sample))) %>%
+            mutate(pct = round(count*100/sum(count),1)) %>%
+            dplyr::select(!count) %>%
+            filter(indel == "NO_INDEL (nREAD)") %>%
+            pivot_wider(names_from = "indel", values_from = "pct")
+
+    print(knitr::kable(merge(nseq, nread, by = "sample")))
+
     if(filter == T){
         x <- x %>%
             mutate(indel = ifelse(insertions + deletions > 0, "WITH_INDEL", "NO_INDEL")) %>%
@@ -116,64 +151,40 @@ remove_indels <- function(x, sample = "sample", filter = T){
 plot_multi_qc <- function(x, sample = "sample", group = NULL){
     x <- x %>%
         group_by_at(vars(one_of(sample, group))) %>%
-        summarize(nseq = n(), nreads = sum(count), nsnps = sum(snps), msnps = mean(snps))
+        summarize(nSEQ = n(), nREAD = sum(count), nSNP = sum(snps), avgSNP = mean(snps))
 
-    size <- 4
     if(length(group) > 0){
         color <- group}
     else{
-        color <- var}
+        color <- sample}
 
-    p1 <- x %>%
-        ggplot(aes(x=nreads, y=nseq)) +
-            geom_point(aes_string(color=color), size = size) +
-            ylab("nSeq") +
-            xlab("nReads") +
-            geom_vline(xintercept = 400, color = "red", linetype = "dashed") +
+    size <- 4
+    plist <- list()
+    plist[[1]] <- x %>%
+        ggplot(aes(x=nREAD, y=nSEQ))
+    plist[[2]] <- x %>%
+        ggplot(aes(x=nREAD, y=nSNP))
+    plist[[3]] <- x %>%
+        ggplot(aes(x=nREAD, y=avgSNP))
+    plist[[4]] <- x %>%
+        ggplot(aes(x=nSEQ, y=nSNP))
+    plist[[5]] <- x %>%
+        ggplot(aes(x=nSEQ, y=avgSNP))
+
+    for(i in seq_along(plist)){
+        plist[[i]] <- plist[[i]] +
+            geom_point(aes_string(fill=color), size = size, shape = 21) +
+            guides(fill = guide_legend(title = "Group")) +
             theme_border() +
+            theme(axis.text.x = element_text(angle = 45, vjust = 0.8, hjust=0.8)) +
             theme(aspect.ratio = 1) +
-            guides(color = guide_none(), shape = guide_none())
+            guides(color = guide_none(), shape = guide_none())}
+    for(i in 1:3){
+        plist[[i]] <- plist[[i]] +
+            geom_vline(xintercept = 400, color = "red", linetype = "dashed")
+    }
 
-    p2 <- x %>%
-        ggplot(aes(x=nreads, y=nsnps)) +
-            geom_point(aes_string(color=color), size = size) +
-            ylab("nSNPs") +
-            xlab("nReads") +
-            geom_vline(xintercept = 400, color = "red", linetype = "dashed") +
-            theme_border() +
-            theme(aspect.ratio = 1) +
-            guides(color = guide_none(), shape = guide_none())
-
-    p3 <- x %>%
-        ggplot(aes(x=nseq, y=nsnps)) +
-            geom_point(aes_string(color=color), size = size) +
-            ylab("nSNPs") +
-            xlab("nSeq") +
-            theme_border() +
-            theme(aspect.ratio = 1) +
-            guides(color = guide_none(), shape = guide_none())
-
-
-    p4 <- x %>%
-        ggplot(aes(x=nseq, y=msnps)) +
-            geom_point(aes_string(color=color), size = size) +
-            ylab("AvgSNPs") +
-            xlab("nSeq") +
-            theme_border() +
-            theme(aspect.ratio = 1) +
-            guides(color = guide_none(), shape = guide_none())
-    p5 <- x %>%
-        ggplot(aes(x=nreads, y=msnps)) +
-            geom_point(aes_string(color=color), size = size) +
-            geom_vline(xintercept = 400, color = "red", linetype = "dashed") +
-            ylab("AvgSNPs") +
-            xlab("nReads") +
-            theme_border() +
-            theme(aspect.ratio = 1)
-
-    plot <- plot_grid(p1, p2, p3, p4, p5, ncol = 3, align = "hv")
-    return(plot)
-}
+    print(plot_grid(plotlist = plist, ncol = 3, align = "hv"))}
 
 #' plot_seq_copy
 #' 
