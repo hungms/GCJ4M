@@ -4,14 +4,12 @@
 \alias{count_transitions}
 \title{count_transitions}
 \usage{
-count_transitions(conversions, count, absolute = T)
+count_transitions(conversions, count)
 }
 \arguments{
-\item{conversions}{}
+\item{conversions}{conversion column}
 
-\item{count}{}
-
-\item{absolute}{defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences}
+\item{count}{count column}
 }
 \description{
 count the number of SNPs for transition frequency

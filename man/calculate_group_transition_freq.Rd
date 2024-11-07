@@ -4,7 +4,7 @@
 \alias{calculate_group_transition_freq}
 \title{calculate_group_transition_freq}
 \usage{
-calculate_group_transition_freq(x, var, absolute = T)
+calculate_group_transition_freq(x, var)
 }
 \arguments{
 \item{x}{dataframe of JH4 pipeline output}

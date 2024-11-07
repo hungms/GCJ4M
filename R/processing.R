@@ -178,7 +178,9 @@ plot_multi_qc <- function(x, sample = "sample", group = NULL){
             geom_vline(xintercept = 400, color = "red", linetype = "dashed")
     }
 
-    print(plot_grid(plotlist = plist, ncol = 3, align = "hv"))}
+    plot <- plot_grid(plotlist = plist, ncol = 3, align = "hv")
+    return(plot)
+    }
 
 #' plot_seq_copy
 #' 
@@ -368,11 +370,10 @@ plot_snp_heatmap <- function(snp_list, legend.title = "CPM"){
 #' 
 #' count the number of SNPs for transition frequency
 #' 
-#' @param conversions 
-#' @param count 
-#' @param absolute defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences
+#' @param conversions conversion column
+#' @param count count column
 #' @export
-count_transitions <- function(conversions, count, absolute = T){
+count_transitions <- function(conversions, count){
     conversions_list <- strsplit(conversions,';')
     transition_list <- list()
 
@@ -384,11 +385,7 @@ count_transitions <- function(conversions, count, absolute = T){
         for(i in 1:length(conversions_list)){
             snp <- c(snp, conversions_list[[i]][position])}
 
-        # if absolute = T, multiply nSNPs by nReads in this sequence
-        if(absolute == F){
-            snp_count <- as.numeric(unlist(str_extract_all(snp, "\\d+\\.?\\d*")))}
-        else{
-            snp_count <- as.numeric(unlist(str_extract_all(snp, "\\d+\\.?\\d*")))*count}
+        snp_count <- as.numeric(unlist(str_extract_all(snp, "\\d+\\.?\\d*")))*count
 
         # calculate sum for this SNP
         transition_list[[position]] <- sum(snp_count)}
@@ -404,7 +401,7 @@ count_transitions <- function(conversions, count, absolute = T){
 #' @param var column name to group by
 #' @param absolute defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences
 #' @export
-calculate_group_transition_freq <- function(x, var, absolute = T) {
+calculate_group_transition_freq <- function(x, var) {
   df <- x %>%
     group_by(across(all_of(c(var)))) %>%
     summarize(
@@ -412,14 +409,8 @@ calculate_group_transition_freq <- function(x, var, absolute = T) {
       nreads = sum(count),
       transition_counts = list(count_transitions(conversions, count, absolute = absolute)),
       .groups = 'drop') %>%
-    unnest_longer(transition_counts, indices_to = "SNP")
-
-  if(absolute == F){
-    df <- df %>%
-      mutate(transition_freq = transition_counts/(nseq*433))}
-  else{
-    df <- df %>%
-      mutate(transition_freq = transition_counts/(nreads*433))}
+    unnest_longer(transition_counts, indices_to = "SNP") %>%
+    mutate(transition_freq = transition_counts/(nreads*433))
 
   return(df)
 }
