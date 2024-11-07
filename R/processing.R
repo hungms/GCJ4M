@@ -399,7 +399,6 @@ count_transitions <- function(conversions, count){
 #' 
 #' @param x dataframe of JH4 pipeline output
 #' @param var column name to group by
-#' @param absolute defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences
 #' @export
 calculate_group_transition_freq <- function(x, var) {
   df <- x %>%
@@ -407,7 +406,7 @@ calculate_group_transition_freq <- function(x, var) {
     summarize(
       nseq = n(),
       nreads = sum(count),
-      transition_counts = list(count_transitions(conversions, count, absolute = absolute)),
+      transition_counts = list(count_transitions(conversions, count)),
       .groups = 'drop') %>%
     unnest_longer(transition_counts, indices_to = "SNP") %>%
     mutate(transition_freq = transition_counts/(nreads*433))

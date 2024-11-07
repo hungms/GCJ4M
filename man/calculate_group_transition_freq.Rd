@@ -10,8 +10,6 @@ calculate_group_transition_freq(x, var)
 \item{x}{dataframe of JH4 pipeline output}
 
 \item{var}{column name to group by}
-
-\item{absolute}{defaults to TRUE to return SNP counts from all reads, else return SNP counts from unique sequences}
 }
 \description{
 calculate SNP transition frequency per group
